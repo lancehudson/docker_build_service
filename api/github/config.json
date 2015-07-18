@@ -1,0 +1,7 @@
+{
+  "name": "github",
+  "description": "github webhook",
+  "routes": {
+    "POST /github": "exec"
+  }
+}
