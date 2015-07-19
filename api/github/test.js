@@ -1,6 +1,10 @@
+'use strict';
+
+// Module dependencies.
 var request = require('supertest');
 var api = require('../..');
 
+// Tests
 describe('POST /github', function() {
   it('should respond with Ping Successful', function(done) {
     var app = api();
@@ -45,9 +49,10 @@ describe('POST /github', function() {
         errors: [
           {
             code: 'invalid_request',
-            title: 'API requires header "X-Github-Event" to be set to a supported event type.'
-          }
-        ]
+            title: 'API requires header "X-Github-Event" ' +
+              'to be set to a supported event type.',
+          },
+        ],
       });
       done();
     });
@@ -71,9 +76,10 @@ describe('POST /github', function() {
         errors: [
           {
             code: 'invalid_request',
-            title: 'API requires header "X-Github-Event" to be set to a supported event type.'
-          }
-        ]
+            title: 'API requires header "X-Github-Event" ' +
+              'to be set to a supported event type.',
+          },
+        ],
       });
       done();
     });

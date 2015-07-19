@@ -1,8 +1,6 @@
+'use strict';
 
-/**
- * Module dependencies.
- */
-
+// Module dependencies.
 var responseTime = require('koa-response-time');
 var ratelimit = require('koa-ratelimit');
 var compress = require('koa-compress');
@@ -14,16 +12,10 @@ var koa = require('koa');
 var koaJsonApiHeaders = require('koa-jsonapi-headers');
 var bodyParser = require('koa-bodyparser');
 
-/**
- * Environment.
- */
-
+// Environment.
 var env = process.env.NODE_ENV || 'development';
 
-/**
- * Expose `api()`.
- */
-
+// Expose `api()`.
 module.exports = api;
 
 /**
@@ -33,29 +25,27 @@ module.exports = api;
  * @return {Application}
  * @api public
  */
-
 function api(opts) {
   opts = opts || {};
   var app = koa();
   var router = new Router(opts);
 
-  // logging
+  // Setup Logging
+  if ('test' !== env) {
+    app.use(logger());
+  }
 
-  if ('test' != env) app.use(logger());
-
-  // x-response-time
-
+  // Setup x-response-time
   app.use(responseTime());
 
-  // rate limiting
-
+  // Setup Rate Limiting
   app.use(ratelimit({
     max: opts.ratelimit,
     duration: opts.duration,
-    db: redis.createClient()
+    db: redis.createClient(),
   }));
 
-  // json api
+  // Enforce JSON Api
   app.use(function *catchJsonApiErrors(next) {
     try {
       yield next;
@@ -68,23 +58,25 @@ function api(opts) {
       this.response.type = 'application/vnd.api+json';
     }
   });
-  app.use(koaJsonApiHeaders({excludeList: [
-    '/github'
-  ]}));
+  app.use(koaJsonApiHeaders({
+    excludeList: [
+      '/github',
+    ],
+  }));
 
-  // parsers
+  // Setup Parsers
   app.use(bodyParser());
 
-  // compression
+  // Setup Compression
 
   app.use(compress());
 
-  // routing
+  // Start Routing
   app
     .use(router.routes())
     .use(router.allowedMethods());
 
-  // boot
+  // Bootstrap API
   load(app, router, __dirname + '/api');
 
   return app;

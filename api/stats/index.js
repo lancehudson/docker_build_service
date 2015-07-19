@@ -1,3 +1,4 @@
+'use strict';
 
 /**
  * This file illustrates how you may map
@@ -5,24 +6,23 @@
  * of resource-based routing.
  */
 
+// Test Data
 var stats = {
   requests: 100000,
-  average_duration: 52,
-  uptime: 123123132
+  averageDuration: 52,
+  uptime: 123123132,
 };
 
 /**
  * GET all stats.
  */
-
-exports.all = function *(){
+exports.all = function* () {
   this.body = stats;
 };
 
 /**
  * GET a single stat.
  */
-
-exports.get = function *(){
+exports.get = function* () {
   this.body = stats[this.params.name];
 };

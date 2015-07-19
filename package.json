@@ -37,5 +37,34 @@
     "koa-router": "^5.1.2",
     "nodemon": "^1.3.7",
     "redis": "^0.12.1"
+  },
+  "jscsConfig": {
+    "preset": "node-style-guide"
+  },
+  "jshintConfig": {
+    "camelcase": true,
+    "curly": true,
+    "eqeqeq": true,
+    "freeze": true,
+    "indent": 2,
+    "newcap": true,
+    "quotmark": "single",
+    "maxdepth": 3,
+    "maxstatements": 15,
+    "maxlen": 80,
+    "eqnull": true,
+    "funcscope": true,
+    "node": true,
+    "esnext": true,
+    "noyield": true,
+    "globals": {
+      "describe": true,
+      "it": true
+    }
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5",
+    "should": "^7.0.2",
+    "supertest": "^1.0.1"
   }
 }
