@@ -2,21 +2,29 @@
 
 // Module dependencies.
 var responseTime = require('koa-response-time');
-var ratelimit = require('koa-ratelimit');
+var ratelimit = require('koa-better-ratelimit');
 var compress = require('koa-compress');
 var logger = require('koa-logger');
-var Router = require('koa-router');
 var load = require('./lib/load');
-var redis = require('redis');
 var koa = require('koa');
 var koaJsonApiHeaders = require('koa-jsonapi-headers');
-var bodyParser = require('koa-bodyparser');
+var bodyParser = require('koa-body');
+var helmet = require('./lib/helmet');
+var mask = require('koa-json-mask');
+var conditional = require('koa-conditional-get');
+var etag = require('koa-etag');
+var errorHandler = require('./lib/errorHandler');
+var catchJsonApiErrors = require('./lib/catchJsonApiErrors');
+var mount = require('koa-mount');
+
+// Config
+var config = require ('./api/config');
 
 // Environment.
 var env = process.env.NODE_ENV || 'development';
 
-// Expose `api()`.
-module.exports = api;
+// Expose `application()`.
+module.exports = application;
 
 /**
  * Initialize an app with the given `opts`.
@@ -25,59 +33,52 @@ module.exports = api;
  * @return {Application}
  * @api public
  */
-function api(opts) {
+function application(opts) {
   opts = opts || {};
   var app = koa();
-  var router = new Router(opts);
 
   // Setup Logging
   if ('test' !== env) {
     app.use(logger());
   }
 
+  // Setup Headers
+  headers(app, opts);
+
+  // Setup Parsers
+  app.use(bodyParser());
+  app.use(mask());
+
+  // Setup Compression
+  app.use(compress());
+
+  // Error Handling
+  errorHandler(app);
+
+  // Bootstrap API
+  load(app, '/api/v1', __dirname + '/api');
+
+  return app;
+}
+
+function headers(app, opts) {
   // Setup x-response-time
   app.use(responseTime());
+
+  // Setup Security Headers
+  helmet(app);
+
+  // Setup etag
+  app.use(conditional());
+  app.use(etag());
 
   // Setup Rate Limiting
   app.use(ratelimit({
     max: opts.ratelimit,
     duration: opts.duration,
-    db: redis.createClient(),
   }));
 
   // Enforce JSON Api
-  app.use(function *catchJsonApiErrors(next) {
-    try {
-      yield next;
-    }
-    catch (err) {
-
-      // Response properties
-      this.status = err.status || 500;
-      this.body = err.message;
-      this.response.type = 'application/vnd.api+json';
-    }
-  });
-  app.use(koaJsonApiHeaders({
-    excludeList: [
-      '/github',
-    ],
-  }));
-
-  // Setup Parsers
-  app.use(bodyParser());
-
-  // Setup Compression
-
-  app.use(compress());
-
-  // Start Routing
-  app
-    .use(router.routes())
-    .use(router.allowedMethods());
-
-  // Bootstrap API
-  load(app, router, __dirname + '/api');
-
-  return app;
+  app.use(mount('/api/v1', catchJsonApiErrors));
+  app.use(mount('/api/v1', koaJsonApiHeaders(config.koaJsonApiHeaders)));
 }
