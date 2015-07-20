@@ -4,24 +4,31 @@
 var request = require('supertest');
 var api = require('..');
 
+// Global
+var app = false;
+
+beforeEach(function() {
+  app = api().listen();
+});
+
+afterEach(function() {
+  app.close();
+  app = false;
+});
+
 // Tests
 describe('GET /notfound', function() {
   it('should respond with not found', function(done) {
-    var app = api();
-
-    request(app.listen())
+    request(app)
     .get('/notfound')
-    .set('Accept', 'application/vnd.api+json')
     .expect(404, done);
   });
 });
 
-describe('GET /test', function() {
+describe('GET /api/v1/test', function() {
   it('should respond with an error', function(done) {
-    var app = api();
-
-    request(app.listen())
-    .get('/notfound')
+    request(app)
+    .get('/api/v1/test')
     .expect(400)
     .end(function(err, res) {
       if (err) { return done(err); }

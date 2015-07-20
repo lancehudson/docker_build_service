@@ -1,0 +1,8 @@
+{
+  "koaJsonApiHeaders": {
+    "excludeList": [
+        "/github",
+        "/ping"
+    ]
+  }
+}

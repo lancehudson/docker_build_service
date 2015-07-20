@@ -4,13 +4,23 @@
 var request = require('supertest');
 var api = require('../..');
 
-// Tests
-describe('GET /users', function() {
-  it('should respond with users', function(done) {
-    var app = api();
+// Global
+var app = false;
 
-    request(app.listen())
-    .get('/users')
+beforeEach(function() {
+  app = api().listen();
+});
+
+afterEach(function() {
+  app.close();
+  app = false;
+});
+
+// Tests
+describe('GET /api/v1/users', function() {
+  it('should respond with users', function(done) {
+    request(app)
+    .get('/api/v1/users')
     .set('Accept', 'application/vnd.api+json')
     .end(function(err, res) {
       if (err) { return done(err); }
@@ -19,10 +29,8 @@ describe('GET /users', function() {
     });
   });
   it('should respond with users/:id', function(done) {
-    var app = api();
-
-    request(app.listen())
-    .get('/users/jane')
+    request(app)
+    .get('/api/v1/users/jane')
     .set('Accept', 'application/vnd.api+json')
     .end(function(err, res) {
       if (err) { return done(err); }

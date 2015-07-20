@@ -4,13 +4,23 @@
 var request = require('supertest');
 var api = require('../..');
 
-// Tests
-describe('GET /stats', function() {
-  it('should respond with stats', function(done) {
-    var app = api();
+// Global
+var app = false;
 
-    request(app.listen())
-    .get('/stats')
+beforeEach(function() {
+  app = api().listen();
+});
+
+afterEach(function() {
+  app.close();
+  app = false;
+});
+
+// Tests
+describe('GET /api/v1/stats', function() {
+  it('should respond with stats', function(done) {
+    request(app)
+    .get('/api/v1/stats')
     .set('Accept', 'application/vnd.api+json')
     .expect({
       requests: 100000,
@@ -21,12 +31,10 @@ describe('GET /stats', function() {
   });
 });
 
-describe('GET /stats/:name', function() {
+describe('GET /api/v1/stats/:name', function() {
   it('should respond with a single stat', function(done) {
-    var app = api();
-
-    request(app.listen())
-    .get('/stats/requests')
+    request(app)
+    .get('/api/v1/stats/requests')
     .set('Accept', 'application/vnd.api+json')
     .expect('100000', done);
   });

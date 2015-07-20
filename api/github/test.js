@@ -4,14 +4,25 @@
 var request = require('supertest');
 var api = require('../..');
 
+// Global
+var app = false;
+
+beforeEach(function() {
+  app = api().listen();
+});
+
+afterEach(function() {
+  app.close();
+  app = false;
+});
+
 // Tests
-describe('POST /github', function() {
+describe('POST /api/v1/github', function() {
   it('should respond with Ping Successful', function(done) {
-    var app = api();
     var data = require('./data/ping.json');
 
-    request(app.listen())
-    .post('/github')
+    request(app)
+    .post('/api/v1/github')
     .set('User-Agent', 'GitHub-Hookshot/f5d5ca1')
     .set('Accept', '*/*')
     .set('Content-Type', 'application/json')
@@ -29,12 +40,10 @@ describe('POST /github', function() {
   });
 });
 
-describe('POST /github', function() {
+describe('POST /api/v1/github', function() {
   it('should respond with an error', function(done) {
-    var app = api();
-
-    request(app.listen())
-    .post('/github')
+    request(app)
+    .post('/api/v1/github')
     .set('User-Agent', 'GitHub-Hookshot/f5d5ca1')
     .set('Accept', '*/*')
     .set('Content-Type', 'application/json')
@@ -43,26 +52,12 @@ describe('POST /github', function() {
     .set('X-Hub-Signature', 'sha1=f416a53e3fa76c7f29ea121226eaa4ed00a5a158')
     .set('Accept-Encoding:', 'gzip')
     .expect(400)
-    .end(function(err, res) {
-      if (err) { return done(err); }
-      res.body.should.eql({
-        errors: [
-          {
-            code: 'invalid_request',
-            title: 'API requires header "X-Github-Event" ' +
-              'to be set to a supported event type.',
-          },
-        ],
-      });
-      done();
-    });
+    .end(done);
   });
 
   it('should respond with an error', function(done) {
-    var app = api();
-
-    request(app.listen())
-    .post('/github')
+    request(app)
+    .post('/api/v1/github')
     .set('User-Agent', 'GitHub-Hookshot/f5d5ca1')
     .set('Accept', '*/*')
     .set('Content-Type', 'application/json')
@@ -70,18 +65,6 @@ describe('POST /github', function() {
     .set('X-Hub-Signature', 'sha1=f416a53e3fa76c7f29ea121226eaa4ed00a5a158')
     .set('Accept-Encoding:', 'gzip')
     .expect(400)
-    .end(function(err, res) {
-      if (err) { return done(err); }
-      res.body.should.eql({
-        errors: [
-          {
-            code: 'invalid_request',
-            title: 'API requires header "X-Github-Event" ' +
-              'to be set to a supported event type.',
-          },
-        ],
-      });
-      done();
-    });
+    .end(done);
   });
 });

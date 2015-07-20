@@ -1,0 +1,10 @@
+{
+  "name": "ping",
+  "description": "healthcheck endpoint",
+  "routes": {
+    "GET /ping": "get"
+  },
+  "allowedIps": [
+    "127.0.0.2"
+  ]
+}
