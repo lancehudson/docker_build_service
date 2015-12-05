@@ -9,6 +9,25 @@ var clone = require('nodegit').Clone.clone;
 var Q = require('q');
 var os = require('os');
 var rimraf = require('rimraf');
+var Docker = require('dockerode');
+var tar = require('tar-fs');
+
+// Patches
+Docker.prototype.push = function(repoTag, callback, auth) {
+  var opts = {
+    path: '/images/' + repoTag + '/push',
+    method: 'POST',
+    statusCodes: {
+      200: true,
+      404: 'no such image',
+      500: 'server error',
+    },
+  };
+
+  this.modem.dial(opts, function(err, data) {
+    callback(err, data);
+  });
+};
 
 // TODO get this from db based on url
 var key = '111';
@@ -120,7 +139,7 @@ var verifySignature = function() {
 // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
 // jscs:disable requireCapitalizedComments
 
-var build = function* () {
+var build = function*() {
   // TODO: make api call to update status
   // TODO: clone repo
   debug('update repo status with clone pending',
@@ -138,8 +157,14 @@ var build = function* () {
     this.head_commit.id, // jshint ignore:line
     'pending', 'Running build'
   );
+  // yield buildImage.call(this);
 
   // TODO: docker tag
+  this.branch = this.ref.replace('refs/heads/', '');
+  if (this.branch.length > 0) {
+    debug('Branch/Tag: ' + this.branch);
+    // yield tagImage.call(this);
+  }
 
   // TODO: docker push
   debug('update repo status with build pending',
@@ -147,6 +172,11 @@ var build = function* () {
     this.head_commit.id, // jshint ignore:line
     'pending', 'Pushing'
   );
+
+  // yield pushImage.call(this);
+  if (this.branch.length > 0) {
+    // yield pushTagImage.call(this);
+  }
 
   debug('update repo status with success',
     this.repository.full_name, // jshint ignore:line
@@ -158,7 +188,7 @@ var build = function* () {
   yield cleanupTmpDir.call(this);
 };
 
-var createTmpDir = function* () {
+var createTmpDir = function*() {
   var defer = Q.defer();
 
   tmp.dir({unsafeCleanup: true}, function(err, path) {
@@ -172,7 +202,7 @@ var createTmpDir = function* () {
   return defer.promise;
 };
 
-var cleanupTmpDir = function* () {
+var cleanupTmpDir = function*() {
   var defer = Q.defer();
 
   rimraf(this.tmpPath, function(err) {
@@ -185,7 +215,7 @@ var cleanupTmpDir = function* () {
   return defer.promise;
 };
 
-var cloneRepo = function* () {
+var cloneRepo = function*() {
   var ctx = this;
   var cloneOptions = {};
 
@@ -203,6 +233,84 @@ var cloneRepo = function* () {
       debug('Getting Commit: ', ctx.head_commit.id);  // jshint ignore:line
       return repo.getCommit(ctx.head_commit.id);  // jshint ignore:line
     });
+};
+
+var buildImage = function*() {
+  // Build and with tag repo:sha
+  var ctx = this;
+  var docker = new Docker();
+  var defer = Q.defer();
+  var tarStream = tar.pack(ctx.tmpPath);
+  docker.buildImage(tarStream, {
+    t: ctx.repository.full_name + ':' +  // jshint ignore:line
+         ctx.head_commit.id,  // jshint ignore:line
+  }, function(err, output) {
+    if (err) {
+      debug('Docker Build Error: ' + err);
+      defer.reject(err);
+    }
+    debug('Docker Build Output: ' + output);
+    defer.resolve();
+  });
+
+  return defer.promise;
+};
+
+var tagImage = function*() {
+  var ctx = this;
+  var docker = new Docker();
+  var defer = Q.defer();
+  var tarStream = tar.pack(ctx.tmpPath);
+  docker.createImage({
+    fromImage: ctx.repository.full_name + ':' +  // jshint ignore:line
+         ctx.head_commit.id,  // jshint ignore:line
+    tag: ctx.repository.full_name + ':' + ctx.branch,  // jshint ignore:line
+  }, function(err, output) {
+    if (err) {
+      debug('Docker Tag Error: ' + err);
+      defer.reject(err);
+    }
+    debug('Docker Tag Output: ' + output);
+    defer.resolve();
+  });
+
+  return defer.promise;
+};
+
+var pushImage = function*() {
+  var ctx = this;
+  var docker = new Docker();
+  var defer = Q.defer();
+  docker.push(ctx.repository.full_name + ':' +  // jshint ignore:line
+         ctx.head_commit.id,  // jshint ignore:line
+    function(err, output) {
+    if (err) {
+      debug('Docker Push Error: ' + err);
+      defer.reject(err);
+    }
+    debug('Docker Push Output: ' + output);
+    defer.resolve();
+  });
+
+  return defer.promise;
+};
+
+var pushTagImage = function*() {
+  var ctx = this;
+  var docker = new Docker();
+  var defer = Q.defer();
+  docker.push(ctx.repository.full_name + ':' +  // jshint ignore:line
+         ctx.branch,  // jshint ignore:line
+    function(err, output) {
+    if (err) {
+      debug('Docker Push Error: ' + err);
+      defer.reject(err);
+    }
+    debug('Docker Push Output: ' + output);
+    defer.resolve();
+  });
+
+  return defer.promise;
 };
 
 // jscs:enable requireCamelCaseOrUpperCaseIdentifiers

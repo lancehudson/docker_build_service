@@ -5,5 +5,6 @@ html(lang="en")
   body
     h1= name.replace(/([a-z])([A-Z])/g, '$1 $2')
     if (env == 'development' || env == 'test')
-      h2= error
+      h2= error.string
+      pre= error.json
       pre= stack
