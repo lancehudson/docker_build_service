@@ -54,6 +54,8 @@ Docker.prototype.tag = function(repoTag, repo, tag, callback, auth) {
   });
 };
 
+// TODO move build to a redis queue so that i can easily track queue size,
+// in progress builds and other stats. plus limit # of workers.
 // TODO get this from db based on url
 var key = '111';
 
