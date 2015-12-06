@@ -17,9 +17,34 @@ Docker.prototype.push = function(repoTag, callback, auth) {
   var opts = {
     path: '/images/' + repoTag + '/push',
     method: 'POST',
+    authconfig: auth,
     statusCodes: {
       200: true,
       404: 'no such image',
+      500: 'server error',
+    },
+  };
+
+  this.modem.dial(opts, function(err, data) {
+    callback(err, data);
+  });
+};
+
+Docker.prototype.tag = function(repoTag, repo, tag, callback, auth) {
+  var opts = {
+    path: '/images/' + repoTag + '/tag?',
+    method: 'POST',
+    options: {
+      repo: repo,
+      tag: tag,
+      force: true,
+    },
+    authconfig: auth,
+    statusCodes: {
+      201: true,
+      400: 'bad parameter',
+      404: 'no such image',
+      409: 'conflict',
       500: 'server error',
     },
   };
@@ -157,13 +182,13 @@ var build = function*() {
     this.head_commit.id, // jshint ignore:line
     'pending', 'Running build'
   );
-  // yield buildImage.call(this);
+  yield buildImage.call(this);
 
   // TODO: docker tag
-  this.branch = this.ref.replace('refs/heads/', '');
-  if (this.branch.length > 0) {
-    debug('Branch/Tag: ' + this.branch);
-    // yield tagImage.call(this);
+  this.tag = this.ref.replace('refs/heads/', '').replace('refs/tags/', '');
+  if (this.tag.length > 0) {
+    debug('Tag: ' + this.tag);
+    yield tagImage.call(this);
   }
 
   // TODO: docker push
@@ -174,7 +199,7 @@ var build = function*() {
   );
 
   // yield pushImage.call(this);
-  if (this.branch.length > 0) {
+  if (this.tag.length > 0) {
     // yield pushTagImage.call(this);
   }
 
@@ -193,10 +218,10 @@ var createTmpDir = function*() {
 
   tmp.dir({unsafeCleanup: true}, function(err, path) {
     if (err) {
-      defer.reject(new Error(err));
+      return defer.reject(new Error(err));
     }
     debug('Temp Dir: ', path);
-    defer.resolve(path);
+    return defer.resolve(path);
   });
 
   return defer.promise;
@@ -207,9 +232,9 @@ var cleanupTmpDir = function*() {
 
   rimraf(this.tmpPath, function(err) {
     if (err) {
-      defer.reject(new Error(err));
+      return defer.reject(new Error(err));
     }
-    defer.resolve();
+    return defer.resolve();
   });
 
   return defer.promise;
@@ -244,13 +269,23 @@ var buildImage = function*() {
   docker.buildImage(tarStream, {
     t: ctx.repository.full_name + ':' +  // jshint ignore:line
          ctx.head_commit.id,  // jshint ignore:line
-  }, function(err, output) {
+  }, function(err, stream) {
     if (err) {
-      debug('Docker Build Error: ' + err);
-      defer.reject(err);
+      debug('Docker Build Error: ' + JSON.stringify(err));
+      return defer.reject(err);
     }
-    debug('Docker Build Output: ' + output);
-    defer.resolve();
+    docker.modem.followProgress(stream,
+    function onFinished(err, output) {
+      if (err) {
+        debug('Docker Build Error: ' + JSON.stringify(err));
+        return defer.reject(err);
+      }
+      debug('Docker Build Event: ' + JSON.stringify(output));
+      return defer.resolve();
+    },
+    function onProgress(event) {
+      debug('Docker Build Event: ' + JSON.stringify(event));
+    });
   });
 
   return defer.promise;
@@ -260,18 +295,18 @@ var tagImage = function*() {
   var ctx = this;
   var docker = new Docker();
   var defer = Q.defer();
-  var tarStream = tar.pack(ctx.tmpPath);
-  docker.createImage({
-    fromImage: ctx.repository.full_name + ':' +  // jshint ignore:line
-         ctx.head_commit.id,  // jshint ignore:line
-    tag: ctx.repository.full_name + ':' + ctx.branch,  // jshint ignore:line
-  }, function(err, output) {
+  docker.tag(
+    ctx.repository.full_name + ':' +  // jshint ignore:line
+      ctx.head_commit.id,  // jshint ignore:line
+    ctx.repository.full_name,  // jshint ignore:line
+    ctx.tag,
+    function(err, output) {
     if (err) {
       debug('Docker Tag Error: ' + err);
-      defer.reject(err);
+      return defer.reject(err);
     }
     debug('Docker Tag Output: ' + output);
-    defer.resolve();
+    return defer.resolve();
   });
 
   return defer.promise;
@@ -286,10 +321,10 @@ var pushImage = function*() {
     function(err, output) {
     if (err) {
       debug('Docker Push Error: ' + err);
-      defer.reject(err);
+      return defer.reject(err);
     }
     debug('Docker Push Output: ' + output);
-    defer.resolve();
+    return defer.resolve();
   });
 
   return defer.promise;
@@ -300,14 +335,14 @@ var pushTagImage = function*() {
   var docker = new Docker();
   var defer = Q.defer();
   docker.push(ctx.repository.full_name + ':' +  // jshint ignore:line
-         ctx.branch,  // jshint ignore:line
+         ctx.tag,  // jshint ignore:line
     function(err, output) {
     if (err) {
       debug('Docker Push Error: ' + err);
-      defer.reject(err);
+      return defer.reject(err);
     }
     debug('Docker Push Output: ' + output);
-    defer.resolve();
+    return defer.resolve();
   });
 
   return defer.promise;
