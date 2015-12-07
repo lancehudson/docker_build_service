@@ -1,80 +1,40 @@
 FORMAT: 1A
-HOST: http://polls.apiblueprint.org/
+HOST: http://docker.lancehudson.io/
 
-# docker_build_server
+# Docker Build Server
 
-Polls is a simple API allowing consumers to view polls and vote in them.
+This is a API supporting a docker image build service that deeply integrates with GitHub.
 
-## Questions Collection [/questions]
+## Ping [/api/v1/ping]
 
-### List All Questions [GET]
+### Health Check [GET]
 
 + Response 200 (application/json)
 
-        [
-            {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 2048
-                    }, {
-                        "choice": "Python",
-                        "votes": 1024
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 512
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 256
-                    }
-                ]
-            }
-        ]
-
-### Create a New Question [POST]
-
-You may create your own question using this action. It takes a JSON
-object containing a question and a collection of answers in the
-form of choices.
-
-+ Request (application/json)
+        {
+          "timestamp": 1449466367912,
+          "uptime": 2.922,
+          "resources": {
+            "memory": {
+              "rss": 63127552,
+              "heapTotal": 42249216,
+              "heapUsed": 29344496
+            },
+            "loadavg": [
+              1.8544921875,
+              1.87451171875,
+              1.9169921875
+            ]
+          }
+        }
+        
++ Response 403 (application/json)
 
         {
-            "question": "Favourite programming language?",
-            "choices": [
-                "Swift",
-                "Python",
-                "Objective-C",
-                "Ruby"
-            ]
-        }
-
-+ Response 201 (application/json)
-
-    + Headers
-
-            Location: /questions/2
-
-    + Body
-
+          "errors": [
             {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 0
-                    }, {
-                        "choice": "Python",
-                        "votes": 0
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 0
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 0
-                    }
-                ]
+              "code": "ForbiddenError",
+              "title": "forbidden"
             }
+          ]
+        }
