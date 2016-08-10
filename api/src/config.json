@@ -1,0 +1,12 @@
+{
+  "name": "Docker Build Service",
+  "keys": ["xxx0xxxxJxxxx9xxxxa4xxxxyxxxxLxx"],
+  "ratelimit": {},
+  "logger": {},
+  "github":{
+    "clientID": false,
+    "clientSecret": false,
+    "callbackURI": "http://127.0.0.1:3000/callback",
+    "scope": "user:email read:org repo_deployment repo write:repo_hook"
+  }
+}
